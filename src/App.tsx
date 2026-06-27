@@ -4,7 +4,14 @@ import axios from 'axios';
 import './index.css';
 import LeanConnect from './components/LeanConnect';
 
-const API_URL = 'https://mobile-verbally-cauterize.ngrok-free.dev';
+// ============================================================
+// ===== API URL CONFIGURATION (Hybrid Approach) =====
+// ============================================================
+// Uses environment variable if set, otherwise falls back to localhost for development.
+// This prevents hardcoding the production URL in the source code.
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+console.log(`🔗 Backend API URL: ${API_URL}`); // Helpful for debugging
+// ============================================================
 
 // Currency list with flags
 const CURRENCIES = {
@@ -73,7 +80,7 @@ const App: React.FC = () => {
 
     // ===== LEAN STATE =====
     // 🔴 REPLACE THIS WITH YOUR ACTUAL UUID FROM LEAN DASHBOARD
-    const [customerId, setCustomerId] = useState<string>('c35a4269-854d-4e2e-a8b2-4a574f67a199');
+    const [customerId, setCustomerId] = useState<string>('REPLACE_WITH_YOUR_UUID');
     const [leanStatus, setLeanStatus] = useState<string>('');
     const [isBankConnected, setIsBankConnected] = useState<boolean>(false);
 
@@ -278,11 +285,11 @@ const App: React.FC = () => {
                             </span>
                         </div>
                     </div>
-                    <div className="header-tagline">
-                        <span className="tagline-icon">🇧🇩</span>
-                        <span className="tagline-text">Send Money to Bangladesh in Minutes</span>
-                        <span className="tagline-features">⚡ Fast • 🔒 Secure • 📊 Transparent</span>
-                    </div>
+                </div>
+                <div className="header-tagline">
+                    <span className="tagline-icon">🇧🇩</span>
+                    <span className="tagline-text">Send Money to Bangladesh in Minutes</span>
+                    <span className="tagline-features">⚡ Fast • 🔒 Secure • 📊 Transparent</span>
                 </div>
             </header>
 
