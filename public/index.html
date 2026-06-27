@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>RemitChain — Cross-Border Remittance</title>
+
+        <!-- ============================================================ -->
+        <!-- LEAN LINKSDK (REQUIRED FOR BANK CONNECTION)                   -->
+        <!-- ============================================================ -->
+        <!-- 
+            This script loads the Lean LinkSDK from Lean's CDN.
+            It is required for the "Connect Bank Account" feature.
+            The SDK exposes `window.Lean` which is used by `LeanConnect.tsx`.
+        -->
+        <script src="https://cdn.leantech.me/link/loader/prod/ae/latest/lean-link-loader.min.js">
+        </script>
+
+        <!-- ============================================================ -->
+        <!-- FAVICON (Optional)                                             -->
+        <!-- ============================================================ -->
+        <!-- <link rel="icon" href="%PUBLIC_URL%/favicon.ico" /> -->
+
+        <!-- ============================================================ -->
+        <!-- MANIFEST (PWA Support - Optional)                             -->
+        <!-- ============================================================ -->
+        <!-- <link rel="manifest" href="%PUBLIC_URL%/manifest.json" /> -->
+
+        <!-- ============================================================ -->
+        <!-- OPEN GRAPH / SOCIAL SHARING (Optional)                        -->
+        <!-- ============================================================ -->
+        <!-- <meta property="og:title" content="RemitChain" /> -->
+        <!-- <meta property="og:description" content="Fast, secure cross-border remittance to Bangladesh" /> -->
+        <!-- <meta property="og:image" content="%PUBLIC_URL%/logo192.png" /> -->
+
+        <!-- ============================================================ -->
+        <!-- THEME COLOR (Optional)                                        -->
+        <!-- ============================================================ -->
+        <!-- <meta name="theme-color" content="#006a4e" /> -->
+    </head>
+
+    <body>
+        <!-- ============================================================ -->
+        <!-- REACT ROOT ELEMENT                                            -->
+        <!-- ============================================================ -->
+        <!-- All React components will be rendered inside this div.        -->
+        <!-- Do not remove this element.                                   -->
+        <div id="root"></div>
+
+        <!-- ============================================================ -->
+        <!-- POST-LOAD SCRIPTS (For debugging Lean SDK)                    -->
+        <!-- ============================================================ -->
+        <!-- You can uncomment the following script to verify that        -->
+        <!-- window.Lean is available after the page loads.               -->
+        <!--
+        <script>
+            console.log('🔍 Checking Lean SDK...');
+            if (typeof window.Lean !== 'undefined') {
+                console.log('✅ Lean SDK loaded successfully:', window.Lean);
+            } else {
+                console.warn('⚠️ Lean SDK not loaded. Check your network or ad blockers.');
+            }
+        </script>
+        -->
+    </body>
+</html>
