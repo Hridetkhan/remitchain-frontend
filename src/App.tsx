@@ -7,10 +7,17 @@ import LeanConnect from './components/LeanConnect';
 // ============================================================
 // ===== API URL CONFIGURATION (Hybrid Approach) =====
 // ============================================================
-// Uses environment variable if set, otherwise falls back to localhost for development.
-// This prevents hardcoding the production URL in the source code.
+// Uses environment variable if set, otherwise falls back to localhost.
+// In production (Vercel), set REACT_APP_API_URL to your backend URL.
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-console.log(`🔗 Backend API URL: ${API_URL}`); // Helpful for debugging
+console.log(`🔗 Backend API URL: ${API_URL}`);
+
+// ============================================================
+// ===== GLOBAL AXIOS CONFIG (Fix for ngrok warning page) =====
+// ============================================================
+// ngrok free tunnels show an interstitial page; this header bypasses it.
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
 // ============================================================
 
 // Currency list with flags
@@ -89,7 +96,8 @@ const App: React.FC = () => {
         setRateLoading(true);
         try {
             const response = await axios.get(`${API_URL}/api/fx/rate`, {
-                params: { base: currency, symbols: 'BDT' }
+                params: { base: currency, symbols: 'BDT' },
+                headers: { 'ngrok-skip-browser-warning': 'true' } // extra safety
             });
             if (response.data.success && response.data.rate) {
                 const rate = parseFloat(response.data.rate);
@@ -130,7 +138,9 @@ const App: React.FC = () => {
     // ===== API CALLS =====
     const checkHealth = async () => {
         try {
-            const res = await axios.get<{ corda_connected: boolean }>(`${API_URL}/api/health`);
+            const res = await axios.get<{ corda_connected: boolean }>(`${API_URL}/api/health`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
             setConnected(res.data.corda_connected);
         } catch (err) {
             setConnected(false);
@@ -140,7 +150,8 @@ const App: React.FC = () => {
     const fetchLedger = async () => {
         try {
             const res = await axios.get<{ data: { states: Array<{ state: { data: Transaction } }> } }>(
-                `${API_URL}/api/corda/vault`
+                `${API_URL}/api/corda/vault`,
+                { headers: { 'ngrok-skip-browser-warning': 'true' } }
             );
             const states = res.data.data.states || [];
             const transactions = states.map((item) => item.state.data);
@@ -152,7 +163,9 @@ const App: React.FC = () => {
 
     const fetchStats = async () => {
         try {
-            const res = await axios.get<{ data: Stats }>(`${API_URL}/api/corda/stats`);
+            const res = await axios.get<{ data: Stats }>(`${API_URL}/api/corda/stats`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
             setStats(res.data.data);
         } catch (err) {
             console.error('Failed to fetch stats');
@@ -186,13 +199,17 @@ const App: React.FC = () => {
                 feeBreakdown: FeeBreakdown;
                 status: string;
                 message: string;
-            }>(`${API_URL}/api/send`, {
-                amount: parseFloat(amount),
-                currency: currency,
-                receiver: receiver,
-                fxRate: fxRate,
-                customerId: customerId
-            });
+            }>(
+                `${API_URL}/api/send`,
+                {
+                    amount: parseFloat(amount),
+                    currency: currency,
+                    receiver: receiver,
+                    fxRate: fxRate,
+                    customerId: customerId
+                },
+                { headers: { 'ngrok-skip-browser-warning': 'true' } }
+            );
 
             if (response.data.success) {
                 setTransactionId(response.data.transactionId);
@@ -213,7 +230,9 @@ const App: React.FC = () => {
     // ===== FETCH TRANSACTION DETAILS =====
     const fetchTransaction = async (txId: string) => {
         try {
-            const res = await axios.get<{ data: Transaction }>(`${API_URL}/api/corda/transaction/${txId}`);
+            const res = await axios.get<{ data: Transaction }>(`${API_URL}/api/corda/transaction/${txId}`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
             setSelectedTx(res.data.data);
         } catch (err) {
             setSelectedTx(null);
