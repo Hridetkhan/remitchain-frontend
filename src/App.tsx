@@ -87,7 +87,7 @@ const App: React.FC = () => {
 
     // ===== LEAN STATE =====
     // 🔴 REPLACE THIS WITH YOUR ACTUAL UUID FROM LEAN DASHBOARD
-    const [customerId, setCustomerId] = useState<string>('REPLACE_WITH_YOUR_UUID');
+    const [customerId, setCustomerId] = useState<string>('5db249a0-2e7b-4d19-836e-dabfbb8abc17');
     const [leanStatus, setLeanStatus] = useState<string>('');
     const [isBankConnected, setIsBankConnected] = useState<boolean>(false);
 
