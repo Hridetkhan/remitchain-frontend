@@ -6,26 +6,58 @@
         <title>RemitChain — Cross-Border Remittance</title>
 
         <!-- ============================================================ -->
-        <!-- LEAN LINKSDK (OFFICIAL LOADER WITH SANDBOX ENV)              -->
+        <!-- LEAN LINKSDK – DIRECT EMBED (BYPASSES LOADER ISSUES)         -->
         <!-- ============================================================ -->
         <!-- 
-            ✅ Universal loader: works in all environments.
-            ✅ ?env=sandbox forces the Lean SDK to load in sandbox mode,
-               matching your backend (auth.sandbox.leantech.me).
+            ⚠️ Instead of relying on the external loader (which is often blocked),
+            we directly include the Lean SDK script from the CDN.
+            This ensures the SDK loads reliably.
         -->
-        <script src="https://cdn.leantech.me/link/loader/ae/latest/lean-link-loader.min.js?env=sandbox">
+        <script src="https://cdn.leantech.me/link/ae/sandbox/lean-link-sdk.min.js">
         </script>
 
         <!-- ============================================================ -->
-        <!-- SAFETY CHECK: Verify Lean SDK loaded                         -->
+        <!-- SAFETY CHECK + FALLBACK                                       -->
         <!-- ============================================================ -->
         <script>
             console.log('🔍 Checking Lean SDK...');
-            if (typeof window.Lean !== 'undefined') {
-                console.log('✅ Lean SDK loaded successfully:', window.Lean);
-            } else {
-                console.error('❌ Lean SDK did not load. Check your network or ad blockers.');
+
+            function checkLeanSDK() {
+                if (typeof window.Lean !== 'undefined') {
+                    console.log('✅ Lean SDK loaded successfully:', window.Lean);
+                    return true;
+                } else {
+                    console.error('❌ Lean SDK still not loaded. Retrying...');
+                    // Retry after 2 seconds
+                    setTimeout(() => {
+                        if (typeof window.Lean !== 'undefined') {
+                            console.log('✅ Lean SDK loaded on retry.');
+                        } else {
+                            console.error('❌ Lean SDK failed to load. Please check your network.');
+                            // Show a fallback message on the page
+                            const root = document.getElementById('root');
+                            if (root) {
+                                root.innerHTML = `
+                                    <div style="padding: 40px; text-align: center; font-family: sans-serif;">
+                                        <h2>⚠️ Lean SDK Failed to Load</h2>
+                                        <p>Please try:</p>
+                                        <ul style="text-align: left; max-width: 400px; margin: 20px auto;">
+                                            <li>Disable any ad blocker</li>
+                                            <li>Refresh the page</li>
+                                            <li>Try a different browser</li>
+                                        </ul>
+                                        <p style="font-size: 12px; color: #666;">Error: Unable to load Lean LinkSDK</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }, 2000);
+                    return false;
+                }
             }
+
+            // Check immediately
+            checkLeanSDK();
         </script>
     </head>
     <body>
