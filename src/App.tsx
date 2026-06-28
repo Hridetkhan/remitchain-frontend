@@ -9,7 +9,7 @@ import LeanConnect from './components/LeanConnect';
 // ============================================================
 // Uses environment variable if set, otherwise falls back to localhost.
 // In production (Vercel), set REACT_APP_API_URL to your backend URL.
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 console.log(`🔗 Backend API URL: ${API_URL}`);
 
 // ============================================================
