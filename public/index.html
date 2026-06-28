@@ -6,36 +6,25 @@
         <title>RemitChain — Cross-Border Remittance</title>
 
         <!-- ============================================================ -->
-        <!-- LEAN LINKSDK – DIRECT EMBED (Bypasses Loader Issues)         -->
+        <!-- LEAN LINKSDK - CORRECT URL WITH SANDBOX ENV                   -->
         <!-- ============================================================ -->
         <!-- 
-            ✅ This is the DIRECT script URL for the Lean SDK.
-            It is NOT the loader. It loads the SDK directly.
-            Works even when the loader is blocked.
+            ✅ The universal loader works for both prod and sandbox.
+            ✅ The env=sandbox query parameter switches to sandbox mode.
+            ❌ DO NOT use /sandbox/ in the URL path - it doesn't exist.
         -->
-        <script src="https://cdn.leantech.me/link/ae/sandbox/latest/lean-link-sdk.min.js">
+        <script src="https://cdn.leantech.me/link/loader/ae/latest/lean-link-loader.min.js?env=sandbox">
         </script>
 
         <!-- ============================================================ -->
         <!-- SAFETY CHECK                                                  -->
         <!-- ============================================================ -->
         <script>
-            console.log('🔍 Checking Lean SDK (Direct Embed)...');
+            console.log('🔍 Checking Lean SDK...');
             if (typeof window.Lean !== 'undefined') {
                 console.log('✅ Lean SDK loaded successfully:', window.Lean);
             } else {
-                console.error('❌ Lean SDK failed to load. Retrying with alternative URL...');
-                
-                // Fallback: Try loading from a different CDN path
-                const script = document.createElement('script');
-                script.src = 'https://cdn.leantech.me/link/ae/prod/latest/lean-link-sdk.min.js';
-                script.onload = function() {
-                    console.log('✅ Lean SDK loaded via fallback URL.');
-                };
-                script.onerror = function() {
-                    console.error('❌ Lean SDK failed to load. Please check your network.');
-                };
-                document.head.appendChild(script);
+                console.error('❌ Lean SDK did not load. Please check your network.');
             }
         </script>
     </head>
