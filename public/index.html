@@ -6,14 +6,15 @@
         <title>RemitChain — Cross-Border Remittance</title>
 
         <!-- ============================================================ -->
-        <!-- LEAN LINKSDK (REQUIRED FOR BANK CONNECTION)                   -->
+        <!-- LEAN LINKSDK (SANDBOX ENVIRONMENT - FIXES THE MISMATCH)       -->
         <!-- ============================================================ -->
         <!-- 
-            This script loads the Lean LinkSDK from Lean's CDN.
-            It is required for the "Connect Bank Account" feature.
-            The SDK exposes `window.Lean` which is used by `LeanConnect.tsx`.
+            ⚠️ CRITICAL: Using the Sandbox loader ensures the iframe loads as 
+            lean-sdk.html?env=sandbox, matching your backend (auth.sandbox.leantech.me).
+            If you use the prod loader, the callback will be blocked due to 
+            environment mismatch.
         -->
-        <script src="https://cdn.leantech.me/link/loader/prod/ae/latest/lean-link-loader.min.js">
+        <script src="https://cdn.leantech.me/link/loader/sandbox/ae/latest/lean-link-loader.min.js">
         </script>
 
         <!-- ============================================================ -->
@@ -50,15 +51,15 @@
         <!-- ============================================================ -->
         <!-- POST-LOAD SCRIPTS (For debugging Lean SDK)                    -->
         <!-- ============================================================ -->
-        <!-- You can uncomment the following script to verify that        -->
-        <!-- window.Lean is available after the page loads.               -->
+        <!-- Uncomment the following script to verify that the sandbox     -->
+        <!-- loader is loaded correctly.                                   -->
         <!--
         <script>
-            console.log('🔍 Checking Lean SDK...');
+            console.log('🔍 Checking Lean SDK (Sandbox)...');
             if (typeof window.Lean !== 'undefined') {
-                console.log('✅ Lean SDK loaded successfully:', window.Lean);
+                console.log('✅ Lean SDK (Sandbox) loaded successfully:', window.Lean);
             } else {
-                console.warn('⚠️ Lean SDK not loaded. Check your network or ad blockers.');
+                console.warn('⚠️ Lean SDK (Sandbox) not loaded. Check your network or ad blockers.');
             }
         </script>
         -->
