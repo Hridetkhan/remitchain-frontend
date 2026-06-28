@@ -6,62 +6,29 @@
         <title>RemitChain — Cross-Border Remittance</title>
 
         <!-- ============================================================ -->
-        <!-- LEAN LINKSDK (SANDBOX ENVIRONMENT - FIXES THE MISMATCH)       -->
+        <!-- LEAN LINKSDK (OFFICIAL LOADER WITH SANDBOX ENV)              -->
         <!-- ============================================================ -->
         <!-- 
-            ⚠️ CRITICAL: Using the Sandbox loader ensures the iframe loads as 
-            lean-sdk.html?env=sandbox, matching your backend (auth.sandbox.leantech.me).
-            If you use the prod loader, the callback will be blocked due to 
-            environment mismatch.
+            ✅ Universal loader: works in all environments.
+            ✅ ?env=sandbox forces the Lean SDK to load in sandbox mode,
+               matching your backend (auth.sandbox.leantech.me).
         -->
-        <script src="https://cdn.leantech.me/link/loader/sandbox/ae/latest/lean-link-loader.min.js">
+        <script src="https://cdn.leantech.me/link/loader/ae/latest/lean-link-loader.min.js?env=sandbox">
         </script>
 
         <!-- ============================================================ -->
-        <!-- FAVICON (Optional)                                             -->
+        <!-- SAFETY CHECK: Verify Lean SDK loaded                         -->
         <!-- ============================================================ -->
-        <!-- <link rel="icon" href="%PUBLIC_URL%/favicon.ico" /> -->
-
-        <!-- ============================================================ -->
-        <!-- MANIFEST (PWA Support - Optional)                             -->
-        <!-- ============================================================ -->
-        <!-- <link rel="manifest" href="%PUBLIC_URL%/manifest.json" /> -->
-
-        <!-- ============================================================ -->
-        <!-- OPEN GRAPH / SOCIAL SHARING (Optional)                        -->
-        <!-- ============================================================ -->
-        <!-- <meta property="og:title" content="RemitChain" /> -->
-        <!-- <meta property="og:description" content="Fast, secure cross-border remittance to Bangladesh" /> -->
-        <!-- <meta property="og:image" content="%PUBLIC_URL%/logo192.png" /> -->
-
-        <!-- ============================================================ -->
-        <!-- THEME COLOR (Optional)                                        -->
-        <!-- ============================================================ -->
-        <!-- <meta name="theme-color" content="#006a4e" /> -->
-    </head>
-
-    <body>
-        <!-- ============================================================ -->
-        <!-- REACT ROOT ELEMENT                                            -->
-        <!-- ============================================================ -->
-        <!-- All React components will be rendered inside this div.        -->
-        <!-- Do not remove this element.                                   -->
-        <div id="root"></div>
-
-        <!-- ============================================================ -->
-        <!-- POST-LOAD SCRIPTS (For debugging Lean SDK)                    -->
-        <!-- ============================================================ -->
-        <!-- Uncomment the following script to verify that the sandbox     -->
-        <!-- loader is loaded correctly.                                   -->
-        <!--
         <script>
-            console.log('🔍 Checking Lean SDK (Sandbox)...');
+            console.log('🔍 Checking Lean SDK...');
             if (typeof window.Lean !== 'undefined') {
-                console.log('✅ Lean SDK (Sandbox) loaded successfully:', window.Lean);
+                console.log('✅ Lean SDK loaded successfully:', window.Lean);
             } else {
-                console.warn('⚠️ Lean SDK (Sandbox) not loaded. Check your network or ad blockers.');
+                console.error('❌ Lean SDK did not load. Check your network or ad blockers.');
             }
         </script>
-        -->
+    </head>
+    <body>
+        <div id="root"></div>
     </body>
 </html>
