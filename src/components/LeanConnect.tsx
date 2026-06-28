@@ -55,11 +55,18 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     // ============================================================
     const handleRealConnect = async () => {
         if (loading) return;
+
+        // ✅ SAFETY CHECK: Ensure Lean SDK is loaded
+        if (!window.Lean || typeof window.Lean.connect !== 'function') {
+            setStatus('❌ Lean SDK not loaded. Please refresh the page and try again.');
+            onError('Lean SDK not loaded');
+            return;
+        }
+
         setLoading(true);
         setStatus('🔐 Getting customer token...');
 
         try {
-            // ✅ FIX: Uses API_URL from App.tsx (Render URL, not localhost)
             const tokenRes = await axios.get(`${API_URL}/api/lean/customer-token`, {
                 params: { customerId }
             });
@@ -76,7 +83,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
                 app_token: appToken,
                 customer_id: customerId,
                 permissions: ['identity', 'accounts', 'balance', 'transactions'],
-                sandbox: true,
+                sandbox: true,  // ← CRITICAL: Force sandbox environment
                 debug: true
             });
 
