@@ -44,21 +44,86 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
                 } else if (response.status === 'CANCEL') {
                     setStatus('⏹️ Cancelled');
                     onError('Cancelled');
+                } else {
+                    setStatus('⚠️ Unknown response: ' + JSON.stringify(response));
+                    onError('Unexpected response');
                 }
             };
             callbackRegistered.current = true;
         }
+
+        // Cleanup on unmount
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        };
     }, [onSuccess, onError]);
 
     // ============================================================
-    // 2. REAL FLOW (LinkSDK - Uses cloud backend)
+    // 2. FORCE RELOAD LEAN SDK (If it didn't load)
+    // ============================================================
+    const reloadLeanSDK = () => {
+        setStatus('🔄 Reloading Lean SDK...');
+        
+        // Remove existing Lean script if any
+        const existingScript = document.querySelector('script[src*="leantech.me"]');
+        if (existingScript) {
+            existingScript.remove();
+        }
+        
+        // Create and load new script
+        const script = document.createElement('script');
+        script.src = 'https://cdn.leantech.me/link/ae/sandbox/latest/lean-link-sdk.min.js';
+        script.onload = () => {
+            console.log('✅ Lean SDK reloaded successfully.');
+            setStatus('✅ Lean SDK reloaded. Please try connecting again.');
+            // Re-register callback
+            if (window.Lean) {
+                window.Lean.callback = (response: any) => {
+                    console.log('📨 Lean callback received (after reload):', response);
+                    setLoading(false);
+                    if (timeoutRef.current) {
+                        clearTimeout(timeoutRef.current);
+                        timeoutRef.current = null;
+                    }
+                    if (response.status === 'SUCCESS') {
+                        setStatus('✅ Bank connected successfully!');
+                        onSuccess(response.entity_id || 'success');
+                    } else if (response.status === 'ERROR') {
+                        setStatus('❌ Error: ' + response.message);
+                        onError(response.message || 'Failed');
+                    } else if (response.status === 'CANCEL') {
+                        setStatus('⏹️ Cancelled');
+                        onError('Cancelled');
+                    }
+                };
+                callbackRegistered.current = true;
+            }
+        };
+        script.onerror = () => {
+            setStatus('❌ Failed to reload Lean SDK. Please refresh the page.');
+        };
+        document.head.appendChild(script);
+    };
+
+    // ============================================================
+    // 3. CHECK IF LEAN SDK IS LOADED
+    // ============================================================
+    const isLeanSDKLoaded = (): boolean => {
+        return window.Lean && typeof window.Lean.connect === 'function';
+    };
+
+    // ============================================================
+    // 4. REAL FLOW (LinkSDK - Uses cloud backend)
     // ============================================================
     const handleRealConnect = async () => {
         if (loading) return;
 
         // ✅ SAFETY CHECK: Ensure Lean SDK is loaded
-        if (!window.Lean || typeof window.Lean.connect !== 'function') {
-            setStatus('❌ Lean SDK not loaded. Please refresh the page and try again.');
+        if (!isLeanSDKLoaded()) {
+            setStatus('❌ Lean SDK not loaded. Click "Reload Lean SDK" and try again.');
             onError('Lean SDK not loaded');
             return;
         }
@@ -78,21 +143,25 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             const customerToken = tokenRes.data.customerToken;
             const appToken = '730a9f67-7149-49e5-988d-30200b8fa695';
 
+            console.log('✅ Customer token received');
+
             window.Lean.connect({
                 access_token: customerToken,
                 app_token: appToken,
                 customer_id: customerId,
                 permissions: ['identity', 'accounts', 'balance', 'transactions'],
-                sandbox: true,  // ← CRITICAL: Force sandbox environment
+                sandbox: true,
                 debug: true
             });
 
             setStatus('🔄 Waiting for bank authorization...');
+            console.log('✅ Lean.connect() called, waiting for callback...');
 
+            // Set timeout for fallback
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             timeoutRef.current = setTimeout(() => {
                 setLoading(false);
-                setStatus('⏰ Real connection timed out. Use "Manual" instead.');
+                setStatus('⏰ Real connection timed out. Use "Manual" or try again.');
                 console.warn('⏰ Lean callback not received after 30s.');
             }, 30000);
 
@@ -105,7 +174,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     };
 
     // ============================================================
-    // 3. MANUAL FLOW (Skip Lean - Demo Mode)
+    // 5. MANUAL FLOW (Skip Lean - Demo Mode)
     // ============================================================
     const handleManualConnect = () => {
         if (loading) return;
@@ -119,7 +188,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     };
 
     // ============================================================
-    // 4. CANCEL
+    // 6. CANCEL
     // ============================================================
     const handleCancel = () => {
         if (timeoutRef.current) {
@@ -132,7 +201,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     };
 
     // ============================================================
-    // 5. RENDER
+    // 7. RENDER
     // ============================================================
     return (
         <div className="lean-connect" style={{ marginTop: 8 }}>
@@ -172,6 +241,24 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
                     ⚡ Manual (Demo)
                 </button>
             </div>
+
+            {/* Reload Lean SDK button */}
+            <button
+                onClick={reloadLeanSDK}
+                style={{
+                    marginTop: 8,
+                    padding: '8px 16px',
+                    background: '#4299e1',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    width: '100%',
+                }}
+            >
+                🔄 Reload Lean SDK (if stuck)
+            </button>
 
             {status && (
                 <p
