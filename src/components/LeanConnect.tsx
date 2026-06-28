@@ -1,8 +1,7 @@
 // frontend/src/components/LeanConnect.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:3001';
+import { API_URL } from '../App';
 
 declare global {
     interface Window {
@@ -22,7 +21,9 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     const callbackRegistered = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // ===== 1. REGISTER LEAN CALLBACK ONCE =====
+    // ============================================================
+    // 1. REGISTER LEAN CALLBACK ONCE
+    // ============================================================
     useEffect(() => {
         if (!callbackRegistered.current && window.Lean) {
             console.log('🔄 Registering Lean callback...');
@@ -49,13 +50,16 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         }
     }, [onSuccess, onError]);
 
-    // ===== 2. REAL FLOW (LinkSDK) =====
+    // ============================================================
+    // 2. REAL FLOW (LinkSDK - Uses cloud backend)
+    // ============================================================
     const handleRealConnect = async () => {
         if (loading) return;
         setLoading(true);
         setStatus('🔐 Getting customer token...');
 
         try {
+            // ✅ FIX: Uses API_URL from App.tsx (Render URL, not localhost)
             const tokenRes = await axios.get(`${API_URL}/api/lean/customer-token`, {
                 params: { customerId }
             });
@@ -86,13 +90,16 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             }, 30000);
 
         } catch (error: any) {
-            setStatus('❌ Error: ' + error.message);
-            onError(error.message);
+            const msg = error.response?.data?.error || error.message || 'Connection failed';
+            setStatus('❌ Error: ' + msg);
+            onError(msg);
             setLoading(false);
         }
     };
 
-    // ===== 3. MANUAL FLOW (Skip Lean) =====
+    // ============================================================
+    // 3. MANUAL FLOW (Skip Lean - Demo Mode)
+    // ============================================================
     const handleManualConnect = () => {
         if (loading) return;
         setStatus('✅ Bank connected manually (demo mode)');
@@ -104,7 +111,9 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         }
     };
 
-    // ===== 4. CANCEL =====
+    // ============================================================
+    // 4. CANCEL
+    // ============================================================
     const handleCancel = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -115,7 +124,9 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         onError('Cancelled');
     };
 
-    // ===== 5. RENDER =====
+    // ============================================================
+    // 5. RENDER
+    // ============================================================
     return (
         <div className="lean-connect" style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -156,7 +167,17 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             </div>
 
             {status && (
-                <p style={{ marginTop: 8, fontSize: 13, color: status.includes('✅') ? '#22543d' : '#9b2c2c' }}>
+                <p
+                    style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        color: status.includes('✅')
+                            ? '#22543d'
+                            : status.includes('❌') || status.includes('⏰')
+                            ? '#9b2c2c'
+                            : '#2b6cb0',
+                    }}
+                >
                     {status}
                 </p>
             )}
@@ -171,7 +192,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
                         color: '#fff',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
                     }}
                 >
                     Cancel
