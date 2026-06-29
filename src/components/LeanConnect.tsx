@@ -20,11 +20,12 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     const [status, setStatus] = useState<string>('');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleRealConnect = async () => {
+    const handleConnect = async () => {
         if (loading) return;
 
+        // ✅ Check if Lean V2 SDK is loaded
         if (!window.LeanV2 || typeof window.LeanV2.connect !== 'function') {
-            setStatus('❌ Lean V2 SDK not loaded. Please refresh.');
+            setStatus('❌ Lean V2 SDK not loaded. Please refresh the page.');
             onError('Lean V2 SDK not loaded');
             return;
         }
@@ -44,24 +45,27 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             const customerToken = tokenRes.data.customerToken;
             const appToken = '730a9f67-7149-49e5-988d-30200b8fa695';
 
-            // ✅ EXACT PATTERN FROM THE HTML WRAPPER (V2 SDK)
+            console.log('✅ Customer token received');
+
+            // ✅ V2 SDK: Callback INSIDE the config
             window.LeanV2.connect({
-                app_token: appToken,
                 customer_id: customerId,
+                app_token: appToken,
                 access_token: customerToken,
                 permissions: ['identity', 'accounts', 'balance', 'transactions'],
                 sandbox: true,
                 debug: true,
                 success_redirect_url: window.location.href,
                 fail_redirect_url: window.location.href,
-                // ✅ Callback INSIDE the config
+                // ✅ CRITICAL: Callback goes here, NOT as a global assignment
                 callback: (response: any) => {
-                    console.log('📨 Lean V2 callback:', response);
+                    console.log('📨 Lean V2 callback received:', response);
                     setLoading(false);
                     if (timeoutRef.current) {
                         clearTimeout(timeoutRef.current);
                         timeoutRef.current = null;
                     }
+
                     if (response.status === 'SUCCESS') {
                         setStatus('✅ Bank connected successfully!');
                         onSuccess(response.entity_id || 'success');
@@ -81,6 +85,8 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             timeoutRef.current = setTimeout(() => {
                 setLoading(false);
                 setStatus('⏰ Connection timed out. Use "Manual" instead.');
+                console.warn('⏰ Lean callback not received after 30s.');
+                onError('Timeout');
             }, 30000);
 
         } catch (error: any) {
@@ -116,7 +122,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         <div className="lean-connect" style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 <button
-                    onClick={handleRealConnect}
+                    onClick={handleConnect}
                     disabled={loading}
                     className="btn-connect"
                     style={{
@@ -152,11 +158,17 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
             </div>
 
             {status && (
-                <p style={{
-                    marginTop: 8,
-                    fontSize: 13,
-                    color: status.includes('✅') ? '#22543d' : '#9b2c2c',
-                }}>
+                <p
+                    style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        color: status.includes('✅')
+                            ? '#22543d'
+                            : status.includes('❌') || status.includes('⏰')
+                            ? '#9b2c2c'
+                            : '#2b6cb0',
+                    }}
+                >
                     {status}
                 </p>
             )}
