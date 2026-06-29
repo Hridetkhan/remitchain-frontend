@@ -6,25 +6,25 @@
         <title>RemitChain — Cross-Border Remittance</title>
 
         <!-- ============================================================ -->
-        <!-- LEAN LINKSDK - CORRECT URL WITH SANDBOX ENV                   -->
+        <!-- LEAN LINKSDK V2 (Official UAE Sandbox)                        -->
         <!-- ============================================================ -->
         <!-- 
-            ✅ The universal loader works for both prod and sandbox.
-            ✅ The env=sandbox query parameter switches to sandbox mode.
-            ❌ DO NOT use /sandbox/ in the URL path - it doesn't exist.
+            ✅ Uses the V2 SDK which has better callback handling.
+            ✅ The same bundle works for both prod and sandbox.
+            ✅ Pass sandbox: true in the config to enable sandbox mode.
         -->
-        <script src="https://cdn.leantech.me/link/loader/prod/ae/latest/lean-link-loader.min.js">
-</script>
+        <script src="https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js">
+        </script>
 
         <!-- ============================================================ -->
         <!-- SAFETY CHECK                                                  -->
         <!-- ============================================================ -->
         <script>
-            console.log('🔍 Checking Lean SDK...');
-            if (typeof window.Lean !== 'undefined') {
-                console.log('✅ Lean SDK loaded successfully:', window.Lean);
+            console.log('🔍 Checking Lean V2 SDK...');
+            if (typeof window.LeanV2 !== 'undefined') {
+                console.log('✅ Lean V2 SDK loaded successfully:', window.LeanV2);
             } else {
-                console.error('❌ Lean SDK did not load. Please check your network.');
+                console.error('❌ Lean V2 SDK did not load. Please check your network.');
             }
         </script>
     </head>
