@@ -1,196 +1,110 @@
 // frontend/src/components/LeanConnect.tsx
-import React, { useState, useRef } from 'react';
-import axios from 'axios';
-import { API_URL } from '../App';
-
-declare global {
-    interface Window {
-        LeanV2: any;
-    }
-}
+import React, { useState, useEffect } from 'react';
 
 interface LeanConnectProps {
-    customerId: string;
-    onSuccess: (entityId: string) => void;
-    onError: (error: string) => void;
+  customerId: string; // Should match the one used on the backend
+  onSuccess: (entityId?: string) => void;
+  onError: (error: string) => void;
+}
+
+declare global {
+  interface Window {
+    LeanV2: {
+      connect: (config: {
+        customer_id: string;
+        app_token: string;
+        access_token: string;
+        permissions: string[];
+        sandbox: boolean;
+        debug: boolean;
+        callback: (response: any) => void;
+      }) => void;
+    };
+  }
 }
 
 const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onError }) => {
-    const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<string>('');
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [customerToken, setCustomerToken] = useState<string | null>(null);
 
-    const handleConnect = async () => {
-        if (loading) return;
+  // 1. Fetch the customer token from your backend
+  const fetchCustomerToken = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/lean/customer-token?customerId=${customerId}`
+      );
+      const data = await response.json();
+      if (data.success) {
+        setCustomerToken(data.customerToken);
+        return data.customerToken;
+      } else {
+        throw new Error(data.error || 'Failed to get token');
+      }
+    } catch (err: any) {
+      onError(err.message);
+      return null;
+    }
+  };
 
-        // ✅ Check if Lean V2 SDK is loaded
-        if (!window.LeanV2 || typeof window.LeanV2.connect !== 'function') {
-            setStatus('❌ Lean V2 SDK not loaded. Please refresh the page.');
-            onError('Lean V2 SDK not loaded');
-            return;
-        }
-
-        setLoading(true);
-        setStatus('🔐 Getting customer token...');
-
-        try {
-            const tokenRes = await axios.get(`${API_URL}/api/lean/customer-token`, {
-                params: { customerId }
-            });
-
-            if (!tokenRes.data.success) {
-                throw new Error(tokenRes.data.error || 'Customer token failed');
-            }
-
-            const customerToken = tokenRes.data.customerToken;
-            const appToken = '730a9f67-7149-49e5-988d-30200b8fa695';
-
-            console.log('✅ Customer token received');
-
-            // ✅ V2 SDK: Callback INSIDE the config
-            window.LeanV2.connect({
-                customer_id: customerId,
-                app_token: appToken,
-                access_token: customerToken,
-                permissions: ['identity', 'accounts', 'balance', 'transactions'],
-                sandbox: true,
-                debug: true,
-                success_redirect_url: window.location.href,
-                fail_redirect_url: window.location.href,
-                // ✅ CRITICAL: Callback goes here, NOT as a global assignment
-                callback: (response: any) => {
-                    console.log('📨 Lean V2 callback received:', response);
-                    setLoading(false);
-                    if (timeoutRef.current) {
-                        clearTimeout(timeoutRef.current);
-                        timeoutRef.current = null;
-                    }
-
-                    if (response.status === 'SUCCESS') {
-                        setStatus('✅ Bank connected successfully!');
-                        onSuccess(response.entity_id || 'success');
-                    } else if (response.status === 'ERROR') {
-                        setStatus('❌ Error: ' + response.message);
-                        onError(response.message || 'Failed');
-                    } else if (response.status === 'CANCELLED') {
-                        setStatus('⏹️ Cancelled');
-                        onError('Cancelled');
-                    }
-                }
-            });
-
-            setStatus('🔄 Waiting for bank authorization...');
-
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            timeoutRef.current = setTimeout(() => {
-                setLoading(false);
-                setStatus('⏰ Connection timed out. Use "Manual" instead.');
-                console.warn('⏰ Lean callback not received after 30s.');
-                onError('Timeout');
-            }, 30000);
-
-        } catch (error: any) {
-            const msg = error.response?.data?.error || error.message || 'Connection failed';
-            setStatus('❌ Error: ' + msg);
-            onError(msg);
-            setLoading(false);
-        }
-    };
-
-    const handleManualConnect = () => {
-        if (loading) return;
-        setStatus('✅ Bank connected manually (demo mode)');
-        onSuccess('manual_entity');
+  // 2. Open Lean LinkSDK when we have the token
+  const openLeanConnect = async () => {
+    setLoading(true);
+    try {
+      const token = await fetchCustomerToken();
+      if (!token) {
         setLoading(false);
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-    };
+        return;
+      }
 
-    const handleCancel = () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-        setStatus('⏹️ Cancelled');
-        setLoading(false);
-        onError('Cancelled');
-    };
+      const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
-    return (
-        <div className="lean-connect" style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                <button
-                    onClick={handleConnect}
-                    disabled={loading}
-                    className="btn-connect"
-                    style={{
-                        flex: 1,
-                        padding: '12px',
-                        background: loading ? '#a0aec0' : 'linear-gradient(135deg, #006a4e, #00875a)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '10px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                    }}
-                >
-                    {loading ? '⏳ Connecting...' : '🔗 Connect Bank Account'}
-                </button>
-                <button
-                    onClick={handleManualConnect}
-                    disabled={loading}
-                    style={{
-                        padding: '12px 20px',
-                        background: loading ? '#a0aec0' : '#ed8936',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '10px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                    }}
-                >
-                    ⚡ Manual (Demo)
-                </button>
-            </div>
+      // ✅ CRITICAL: Include 'payments' in permissions
+      window.LeanV2.connect({
+        customer_id: customerId,
+        app_token: appToken,
+        access_token: token,
+        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // <-- ADDED 'payments'
+        sandbox: true,
+        debug: true,
+        callback: (response: any) => {
+          console.log('📨 Lean V2 callback received:', response);
+          if (response.status === 'SUCCESS') {
+            // Payment Source is automatically created by Lean thanks to 'payments' permission
+            onSuccess(response.entity_id || 'success');
+          } else if (response.status === 'CANCELLED') {
+            onError('User cancelled the connection.');
+          } else {
+            onError(`Lean error: ${response.error || 'Unknown error'}`);
+          }
+          setLoading(false);
+        },
+      });
+    } catch (err: any) {
+      onError(err.message);
+      setLoading(false);
+    }
+  };
 
-            {status && (
-                <p
-                    style={{
-                        marginTop: 8,
-                        fontSize: 13,
-                        color: status.includes('✅')
-                            ? '#22543d'
-                            : status.includes('❌') || status.includes('⏰')
-                            ? '#9b2c2c'
-                            : '#2b6cb0',
-                    }}
-                >
-                    {status}
-                </p>
-            )}
+  useEffect(() => {
+    // Load Lean SDK script if not already loaded
+    if (!document.querySelector('script[src*="leantech.me/link/sdk"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js';
+      script.async = true;
+      script.onload = () => console.log('Lean SDK loaded');
+      document.head.appendChild(script);
+    }
+  }, []);
 
-            {loading && (
-                <button
-                    onClick={handleCancel}
-                    style={{
-                        marginTop: 8,
-                        padding: '6px 16px',
-                        background: '#e53e3e',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                    }}
-                >
-                    Cancel
-                </button>
-            )}
-        </div>
-    );
+  return (
+    <button
+      onClick={openLeanConnect}
+      disabled={loading}
+      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+    >
+      {loading ? 'Connecting...' : 'Connect Bank Account'}
+    </button>
+  );
 };
 
 export default LeanConnect;
