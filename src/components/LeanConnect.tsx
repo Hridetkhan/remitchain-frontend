@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface LeanConnectProps {
-  customerId: string; // Should match the one used on the backend
-  onSuccess: (entityId?: string) => void;
+  customerId: string;
+  onSuccess: (entityId: string) => void; // ✅ required, not optional
   onError: (error: string) => void;
 }
 
@@ -27,7 +27,6 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
   const [loading, setLoading] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
 
-  // 1. Fetch the customer token from your backend
   const fetchCustomerToken = async () => {
     try {
       const response = await fetch(
@@ -46,7 +45,6 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     }
   };
 
-  // 2. Open Lean LinkSDK when we have the token
   const openLeanConnect = async () => {
     setLoading(true);
     try {
@@ -58,18 +56,17 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
 
       const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
-      // ✅ CRITICAL: Include 'payments' in permissions
       window.LeanV2.connect({
         customer_id: customerId,
         app_token: appToken,
         access_token: token,
-        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // <-- ADDED 'payments'
+        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // ✅ includes 'payments'
         sandbox: true,
         debug: true,
         callback: (response: any) => {
           console.log('📨 Lean V2 callback received:', response);
           if (response.status === 'SUCCESS') {
-            // Payment Source is automatically created by Lean thanks to 'payments' permission
+            // entity_id is always a string (or fallback to 'success')
             onSuccess(response.entity_id || 'success');
           } else if (response.status === 'CANCELLED') {
             onError('User cancelled the connection.');
@@ -86,7 +83,6 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
   };
 
   useEffect(() => {
-    // Load Lean SDK script if not already loaded
     if (!document.querySelector('script[src*="leantech.me/link/sdk"]')) {
       const script = document.createElement('script');
       script.src = 'https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js';
