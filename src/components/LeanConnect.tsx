@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 interface LeanConnectProps {
   customerId: string;
-  onSuccess: (entityId: string) => void; // ✅ required, not optional
+  onSuccess: (entityId: string) => void; // required, not optional
   onError: (error: string) => void;
 }
 
@@ -25,7 +25,6 @@ declare global {
 
 const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
-  const [customerToken, setCustomerToken] = useState<string | null>(null);
 
   const fetchCustomerToken = async () => {
     try {
@@ -34,7 +33,6 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
       );
       const data = await response.json();
       if (data.success) {
-        setCustomerToken(data.customerToken);
         return data.customerToken;
       } else {
         throw new Error(data.error || 'Failed to get token');
@@ -60,13 +58,12 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         customer_id: customerId,
         app_token: appToken,
         access_token: token,
-        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // ✅ includes 'payments'
+        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // ✅ KEY FIX
         sandbox: true,
         debug: true,
         callback: (response: any) => {
           console.log('📨 Lean V2 callback received:', response);
           if (response.status === 'SUCCESS') {
-            // entity_id is always a string (or fallback to 'success')
             onSuccess(response.entity_id || 'success');
           } else if (response.status === 'CANCELLED') {
             onError('User cancelled the connection.');
