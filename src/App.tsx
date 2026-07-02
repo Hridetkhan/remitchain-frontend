@@ -4,20 +4,11 @@ import axios from 'axios';
 import './index.css';
 import LeanConnect from './components/LeanConnect';
 
-// ============================================================
-// ===== API URL CONFIGURATION =====
-// ============================================================
 export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 console.log(`🔗 Backend API URL: ${API_URL}`);
 
-// ============================================================
-// ===== GLOBAL AXIOS CONFIG =====
-// ============================================================
 axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 
-// ============================================================
-// ===== CURRENCY CONFIG =====
-// ============================================================
 const CURRENCIES = {
     AED: { flag: '🇦🇪', name: 'UAE Dirham', symbol: 'د.إ' },
     USD: { flag: '🇺🇸', name: 'US Dollar', symbol: '$' },
@@ -27,9 +18,6 @@ const CURRENCIES = {
     BDT: { flag: '🇧🇩', name: 'Bangladeshi Taka', symbol: '৳' }
 };
 
-// ============================================================
-// ===== TYPES =====
-// ============================================================
 interface FeeBreakdown {
     bdtAmount: number;
     totalFee: number;
@@ -68,11 +56,7 @@ interface Stats {
     totalProfitAED: number;
 }
 
-// ============================================================
-// ===== APP COMPONENT =====
-// ============================================================
 const App: React.FC = () => {
-    // ===== STATE =====
     const [amount, setAmount] = useState<string>('');
     const [receiver, setReceiver] = useState<string>('');
     const [currency, setCurrency] = useState<string>('AED');
@@ -88,12 +72,10 @@ const App: React.FC = () => {
     const [liveRate, setLiveRate] = useState<number | null>(null);
     const [rateLoading, setRateLoading] = useState<boolean>(true);
 
-    // ===== LEAN STATE =====
-    const [customerId, setCustomerId] = useState<string>('7c1453fd-4ad6-44b2-aed4-087f4822d069');
+    const [customerId] = useState<string>('7c1453fd-4ad6-44b2-aed4-087f4822d069');
     const [leanStatus, setLeanStatus] = useState<string>('');
     const [isBankConnected, setIsBankConnected] = useState<boolean>(false);
 
-    // ===== FETCH LIVE FX RATE =====
     const fetchLiveRate = async () => {
         setRateLoading(true);
         try {
@@ -122,7 +104,6 @@ const App: React.FC = () => {
         setRateLoading(false);
     };
 
-    // ===== USE EFFECTS =====
     useEffect(() => {
         fetchLiveRate();
         const interval = setInterval(fetchLiveRate, 60000);
@@ -137,7 +118,6 @@ const App: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // ===== API CALLS =====
     const checkHealth = async () => {
         try {
             const res = await axios.get<{ corda_connected: boolean }>(`${API_URL}/api/health`, {
@@ -174,7 +154,7 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== SEND MONEY – UPDATED TO USE PAYMENT INTENTS =====
+    // ===== SEND MONEY – using Payment Intents =====
     const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!amount || !receiver || parseFloat(amount) <= 0) {
@@ -224,20 +204,19 @@ const App: React.FC = () => {
             const customerToken = tokenData.customerToken;
             const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
-            // 3. Launch Lean pay modal
+            // 3. Launch Lean connect with payment_intent_id
             setStatus('🔐 Redirecting to your bank...');
-            window.LeanV2.pay({
+            window.LeanV2.connect({
                 payment_intent_id: paymentIntentId,
                 customer_id: customerId,
                 app_token: appToken,
                 access_token: customerToken,
                 callback: (response: any) => {
-                    console.log('📨 Lean pay callback:', response);
+                    console.log('📨 Lean connect callback:', response);
                     setLoading(false);
                     if (response.status === 'SUCCESS') {
                         setStatus('✅ Payment authorized! Settling on blockchain...');
-                        // Settle on Corda using the existing /api/send (demo)
-                        // In production, you'd wait for webhook and trigger Corda from backend.
+                        // Call the legacy /api/send to simulate Corda settlement (temporary)
                         settleTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
                     } else if (response.status === 'CANCELLED') {
                         setStatus('❌ Payment cancelled by user');
@@ -252,7 +231,7 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== Simulate Corda settlement (temporary) =====
+    // Temporary simulation of Corda settlement via /api/send (demo mode)
     const settleTransaction = async (amount: number, currency: string, receiver: string, fxRate: number, customerId: string) => {
         try {
             const response = await axios.post(
@@ -280,7 +259,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== FETCH TRANSACTION DETAILS =====
     const fetchTransaction = async (txId: string) => {
         try {
             const res = await axios.get<{ data: Transaction }>(`${API_URL}/api/corda/transaction/${txId}`, {
@@ -292,7 +270,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== FORMAT DATE =====
     const formatDate = (dateStr: string) => {
         if (!dateStr || dateStr === 'Invalid Date') return 'Just now';
         const date = new Date(dateStr);
@@ -305,7 +282,6 @@ const App: React.FC = () => {
         });
     };
 
-    // ===== LEAN HANDLERS =====
     const handleLeanSuccess = (entityId: string) => {
         setIsBankConnected(true);
         setLeanStatus(`✅ Bank connected successfully! Entity ID: ${entityId}`);
@@ -318,11 +294,8 @@ const App: React.FC = () => {
         setStatus('❌ Bank connection failed. Please try again.');
     };
 
-    // ===== RENDER =====
     return (
         <div className="app-container">
-
-            {/* ===== HEADER ===== */}
             <header className="bangladesh-header">
                 <div className="header-bg-pattern"></div>
                 <div className="header-content">
@@ -365,7 +338,6 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            {/* ===== STATS DASHBOARD ===== */}
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon">📊</div>
@@ -396,8 +368,6 @@ const App: React.FC = () => {
             </div>
 
             <div className="main-grid">
-
-                {/* ===== SEND MONEY CARD ===== */}
                 <div className="card send-card">
                     <h2 className="card-title">💸 Send Money</h2>
                     <div className="fee-badge">
@@ -461,7 +431,6 @@ const App: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ===== LEAN BANK CONNECTION ===== */}
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
                         <LeanConnect
                             customerId={customerId}
@@ -484,7 +453,6 @@ const App: React.FC = () => {
                         )}
                     </div>
 
-                    {/* ===== FEE BREAKDOWN ===== */}
                     {feeBreakdown && (
                         <div className="fee-breakdown">
                             <h3 className="fee-title">Fee Breakdown</h3>
@@ -528,7 +496,6 @@ const App: React.FC = () => {
                     )}
                 </div>
 
-                {/* ===== LEDGER CARD ===== */}
                 <div className="card ledger-card">
                     <h2 className="card-title">📊 Blockchain Ledger</h2>
                     <p className="ledger-count">{ledger.length} transactions recorded</p>
@@ -578,7 +545,6 @@ const App: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ===== TRANSACTION MODAL ===== */}
                     {selectedTx && (
                         <div className="tx-modal-overlay" onClick={() => setSelectedTx(null)}>
                             <div className="tx-modal" onClick={(e) => e.stopPropagation()}>
@@ -624,10 +590,8 @@ const App: React.FC = () => {
                         </div>
                     )}
                 </div>
-
             </div>
 
-            {/* ===== FOOTER ===== */}
             <footer className="footer">
                 <p>© 2026 RemitChain — Built for the Bangladeshi Diaspora</p>
                 <div className="footer-links">
