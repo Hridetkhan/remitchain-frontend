@@ -5,22 +5,19 @@ import './index.css';
 import LeanConnect from './components/LeanConnect';
 
 // ============================================================
-// ===== API URL CONFIGURATION (Hybrid Approach) =====
+// ===== API URL CONFIGURATION =====
 // ============================================================
-// Uses environment variable if set, otherwise falls back to localhost.
-// In production (Vercel), set REACT_APP_API_URL to your backend URL.
 export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 console.log(`🔗 Backend API URL: ${API_URL}`);
 
 // ============================================================
-// ===== GLOBAL AXIOS CONFIG (Fix for ngrok warning page) =====
+// ===== GLOBAL AXIOS CONFIG =====
 // ============================================================
-// ngrok free tunnels show an interstitial page; this header bypasses it.
 axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 
 // ============================================================
-
-// Currency list with flags
+// ===== CURRENCY CONFIG =====
+// ============================================================
 const CURRENCIES = {
     AED: { flag: '🇦🇪', name: 'UAE Dirham', symbol: 'د.إ' },
     USD: { flag: '🇺🇸', name: 'US Dollar', symbol: '$' },
@@ -30,6 +27,9 @@ const CURRENCIES = {
     BDT: { flag: '🇧🇩', name: 'Bangladeshi Taka', symbol: '৳' }
 };
 
+// ============================================================
+// ===== TYPES =====
+// ============================================================
 interface FeeBreakdown {
     bdtAmount: number;
     totalFee: number;
@@ -68,6 +68,9 @@ interface Stats {
     totalProfitAED: number;
 }
 
+// ============================================================
+// ===== APP COMPONENT =====
+// ============================================================
 const App: React.FC = () => {
     // ===== STATE =====
     const [amount, setAmount] = useState<string>('');
@@ -86,7 +89,6 @@ const App: React.FC = () => {
     const [rateLoading, setRateLoading] = useState<boolean>(true);
 
     // ===== LEAN STATE =====
-    // 🔴 REPLACE THIS WITH YOUR ACTUAL UUID FROM LEAN DASHBOARD
     const [customerId, setCustomerId] = useState<string>('7c1453fd-4ad6-44b2-aed4-087f4822d069');
     const [leanStatus, setLeanStatus] = useState<string>('');
     const [isBankConnected, setIsBankConnected] = useState<boolean>(false);
@@ -97,7 +99,7 @@ const App: React.FC = () => {
         try {
             const response = await axios.get(`${API_URL}/api/fx/rate`, {
                 params: { base: currency, symbols: 'BDT' },
-                headers: { 'ngrok-skip-browser-warning': 'true' } // extra safety
+                headers: { 'ngrok-skip-browser-warning': 'true' }
             });
             if (response.data.success && response.data.rate) {
                 const rate = parseFloat(response.data.rate);
@@ -172,7 +174,7 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== SEND MONEY =====
+    // ===== SEND MONEY – UPDATED TO USE PAYMENT INTENTS =====
     const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!amount || !receiver || parseFloat(amount) <= 0) {
@@ -186,31 +188,84 @@ const App: React.FC = () => {
         }
 
         setLoading(true);
-        setStatus('⏳ Processing transaction...');
+        setStatus('⏳ Creating payment...');
         setFeeBreakdown(null);
         setTransactionId(null);
 
         try {
-            const response = await axios.post<{
-                success: boolean;
-                transactionId: string;
-                txHash: string;
-                timestamp: string;
-                feeBreakdown: FeeBreakdown;
-                status: string;
-                message: string;
-            }>(
-                `${API_URL}/api/send`,
-                {
+            // 1. Create Payment Intent
+            const intentRes = await fetch(`${API_URL}/api/payment/intent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     amount: parseFloat(amount),
                     currency: currency,
-                    receiver: receiver,
-                    fxRate: fxRate,
-                    customerId: customerId
+                    customerId: customerId,
+                    description: `RemitChain to ${receiver}`
+                })
+            });
+            const intentData = await intentRes.json();
+            if (!intentData.success) {
+                setStatus(`❌ Failed to create payment: ${intentData.error}`);
+                setLoading(false);
+                return;
+            }
+            const paymentIntentId = intentData.paymentIntentId;
+            console.log('✅ Payment Intent created:', paymentIntentId);
+
+            // 2. Get customer token
+            const tokenRes = await fetch(`${API_URL}/api/lean/customer-token?customerId=${customerId}`);
+            const tokenData = await tokenRes.json();
+            if (!tokenData.success) {
+                setStatus('❌ Could not get customer token');
+                setLoading(false);
+                return;
+            }
+            const customerToken = tokenData.customerToken;
+            const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
+
+            // 3. Launch Lean pay modal
+            setStatus('🔐 Redirecting to your bank...');
+            window.LeanV2.pay({
+                payment_intent_id: paymentIntentId,
+                customer_id: customerId,
+                app_token: appToken,
+                access_token: customerToken,
+                callback: (response: any) => {
+                    console.log('📨 Lean pay callback:', response);
+                    setLoading(false);
+                    if (response.status === 'SUCCESS') {
+                        setStatus('✅ Payment authorized! Settling on blockchain...');
+                        // Settle on Corda using the existing /api/send (demo)
+                        // In production, you'd wait for webhook and trigger Corda from backend.
+                        settleTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
+                    } else if (response.status === 'CANCELLED') {
+                        setStatus('❌ Payment cancelled by user');
+                    } else {
+                        setStatus(`❌ Payment failed: ${response.error || 'Unknown error'}`);
+                    }
+                }
+            });
+        } catch (err: any) {
+            setStatus(`❌ Error: ${err.message}`);
+            setLoading(false);
+        }
+    };
+
+    // ===== Simulate Corda settlement (temporary) =====
+    const settleTransaction = async (amount: number, currency: string, receiver: string, fxRate: number, customerId: string) => {
+        try {
+            const response = await axios.post(
+                `${API_URL}/api/send`,
+                {
+                    amount,
+                    currency,
+                    receiver,
+                    fxRate,
+                    customerId
                 },
                 { headers: { 'ngrok-skip-browser-warning': 'true' } }
             );
-
             if (response.data.success) {
                 setTransactionId(response.data.transactionId);
                 setFeeBreakdown(response.data.feeBreakdown);
@@ -218,12 +273,10 @@ const App: React.FC = () => {
                 await fetchLedger();
                 await fetchStats();
             } else {
-                setStatus(`❌ Transaction failed: ${response.data.message}`);
+                setStatus(`❌ Settlement failed: ${response.data.message}`);
             }
         } catch (err: any) {
-            setStatus(`❌ Error: ${err.message}`);
-        } finally {
-            setLoading(false);
+            setStatus(`❌ Settlement error: ${err.message}`);
         }
     };
 
@@ -269,7 +322,7 @@ const App: React.FC = () => {
     return (
         <div className="app-container">
 
-            {/* ===== UNIFIED BANGLADESH HEADER ===== */}
+            {/* ===== HEADER ===== */}
             <header className="bangladesh-header">
                 <div className="header-bg-pattern"></div>
                 <div className="header-content">
