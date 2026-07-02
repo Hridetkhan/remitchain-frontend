@@ -7,10 +7,22 @@ interface LeanConnectProps {
   onError: (error: string) => void;
 }
 
+// Config type supports both bank connection and payment intents
+interface LeanConnectConfig {
+  customer_id?: string;
+  app_token?: string;
+  access_token?: string;
+  permissions?: string[];
+  sandbox?: boolean;
+  debug?: boolean;
+  payment_intent_id?: string;  // for one‑off payments
+  callback: (response: any) => void;
+}
+
 declare global {
   interface Window {
     LeanV2: {
-      connect: (config: any) => void;
+      connect: (config: LeanConnectConfig) => void;
     };
   }
 }
@@ -43,21 +55,16 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
 
       const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
-      console.log('🔑 Opening Lean LinkSDK with permissions:', [
-        'identity', 'accounts', 'balance', 'transactions', 'payments'
-      ]);
-
       window.LeanV2.connect({
         customer_id: customerId,
         app_token: appToken,
         access_token: token,
-        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'], // ✅ CRITICAL
+        permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'],
         sandbox: true,
         debug: true,
         callback: (response: any) => {
-          console.log('📨 Lean callback:', response);
+          console.log('📨 Lean V2 callback received:', response);
           if (response.status === 'SUCCESS') {
-            // Optionally, you can call a backend endpoint to confirm PS creation
             onSuccess(response.entity_id || 'success');
           } else if (response.status === 'CANCELLED') {
             onError('User cancelled the connection.');
@@ -78,7 +85,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
       const script = document.createElement('script');
       script.src = 'https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js';
       script.async = true;
-      script.onload = () => console.log('✅ Lean SDK loaded');
+      script.onload = () => console.log('Lean SDK loaded');
       document.head.appendChild(script);
     }
   }, []);
@@ -87,19 +94,9 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     <button
       onClick={openLeanConnect}
       disabled={loading}
-      style={{
-        width: '100%',
-        padding: '12px',
-        background: loading ? '#a0aec0' : 'linear-gradient(135deg, #006a4e, #00875a)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '10px',
-        fontSize: '16px',
-        fontWeight: '600',
-        cursor: loading ? 'not-allowed' : 'pointer',
-      }}
+      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
     >
-      {loading ? '⏳ Connecting...' : '🔗 Connect Bank Account'}
+      {loading ? 'Connecting...' : 'Connect Bank Account'}
     </button>
   );
 };
