@@ -7,7 +7,7 @@ interface LeanConnectProps {
   onError: (error: string) => void;
 }
 
-// Config type supports both bank connection and payment intents
+// Config for bank connection (connect)
 interface LeanConnectConfig {
   customer_id?: string;
   app_token?: string;
@@ -15,7 +15,19 @@ interface LeanConnectConfig {
   permissions?: string[];
   sandbox?: boolean;
   debug?: boolean;
-  payment_intent_id?: string;  // for one‑off payments
+  payment_intent_id?: string; // for payment intents
+  show_consent_explanation?: boolean;
+  success_redirect_url?: string;
+  fail_redirect_url?: string;
+  callback: (response: any) => void;
+}
+
+// Config for one‑off payment (pay)
+interface LeanPayConfig {
+  payment_intent_id: string;
+  customer_id: string;
+  app_token: string;
+  access_token: string;
   callback: (response: any) => void;
 }
 
@@ -23,6 +35,7 @@ declare global {
   interface Window {
     LeanV2: {
       connect: (config: LeanConnectConfig) => void;
+      pay: (config: LeanPayConfig) => void;
     };
   }
 }
@@ -62,6 +75,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
         permissions: ['identity', 'accounts', 'balance', 'transactions', 'payments'],
         sandbox: true,
         debug: true,
+        show_consent_explanation: true,
         callback: (response: any) => {
           console.log('📨 Lean V2 callback received:', response);
           if (response.status === 'SUCCESS') {
@@ -81,6 +95,7 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
   };
 
   useEffect(() => {
+    // Load Lean SDK if not already present
     if (!document.querySelector('script[src*="leantech.me/link/sdk"]')) {
       const script = document.createElement('script');
       script.src = 'https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js';
