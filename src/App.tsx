@@ -72,7 +72,7 @@ const App: React.FC = () => {
     const [liveRate, setLiveRate] = useState<number | null>(null);
     const [rateLoading, setRateLoading] = useState<boolean>(true);
 
-    const [customerId] = useState<string>('7c1453fd-4ad6-44b2-aed4-087f4822d069');
+    const [customerId, setCustomerId] = useState<string>('7c1453fd-4ad6-44b2-aed4-087f4822d069');
     const [leanStatus, setLeanStatus] = useState<string>('');
     const [isBankConnected, setIsBankConnected] = useState<boolean>(false);
 
@@ -154,7 +154,7 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== SEND MONEY – using Payment Intents =====
+    // ===== SEND MONEY – using Payment Intents (Open Finance) =====
     const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!amount || !receiver || parseFloat(amount) <= 0) {
@@ -204,19 +204,21 @@ const App: React.FC = () => {
             const customerToken = tokenData.customerToken;
             const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
-            // 3. Launch Lean connect with payment_intent_id
+            // 3. Launch Lean pay modal
             setStatus('🔐 Redirecting to your bank...');
-            window.LeanV2.connect({
+
+            // ✅ Correct: Use .pay() with payment_intent_id
+            window.LeanV2.pay({
                 payment_intent_id: paymentIntentId,
                 customer_id: customerId,
                 app_token: appToken,
                 access_token: customerToken,
                 callback: (response: any) => {
-                    console.log('📨 Lean connect callback:', response);
+                    console.log('📨 Lean pay callback:', response);
                     setLoading(false);
                     if (response.status === 'SUCCESS') {
                         setStatus('✅ Payment authorized! Settling on blockchain...');
-                        // Call the legacy /api/send to simulate Corda settlement (temporary)
+                        // Call the legacy /api/send to simulate Corda settlement
                         settleTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
                     } else if (response.status === 'CANCELLED') {
                         setStatus('❌ Payment cancelled by user');
@@ -231,18 +233,12 @@ const App: React.FC = () => {
         }
     };
 
-    // Temporary simulation of Corda settlement via /api/send (demo mode)
+    // Helper to simulate Corda settlement (still uses /api/send for demo)
     const settleTransaction = async (amount: number, currency: string, receiver: string, fxRate: number, customerId: string) => {
         try {
             const response = await axios.post(
                 `${API_URL}/api/send`,
-                {
-                    amount,
-                    currency,
-                    receiver,
-                    fxRate,
-                    customerId
-                },
+                { amount, currency, receiver, fxRate, customerId },
                 { headers: { 'ngrok-skip-browser-warning': 'true' } }
             );
             if (response.data.success) {
