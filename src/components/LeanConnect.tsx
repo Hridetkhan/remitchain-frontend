@@ -15,7 +15,7 @@ interface LeanConnectConfig {
   permissions?: string[];
   sandbox?: boolean;
   debug?: boolean;
-  payment_intent_id?: string; // for payment intents
+  payment_intent_id?: string;
   show_consent_explanation?: boolean;
   success_redirect_url?: string;
   fail_redirect_url?: string;
@@ -95,7 +95,6 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
   };
 
   useEffect(() => {
-    // Load Lean SDK if not already present
     if (!document.querySelector('script[src*="leantech.me/link/sdk"]')) {
       const script = document.createElement('script');
       script.src = 'https://cdn.leantech.me/link/sdk/web/v2/prod/ae/latest/Lean.min.js';
@@ -109,9 +108,35 @@ const LeanConnect: React.FC<LeanConnectProps> = ({ customerId, onSuccess, onErro
     <button
       onClick={openLeanConnect}
       disabled={loading}
-      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+      style={{
+        width: '100%',
+        padding: '14px',
+        background: loading ? '#a0aec0' : 'linear-gradient(135deg, #dc2626, #b91c1c)',
+        color: '#ffffff',
+        border: 'none',
+        borderRadius: '10px',
+        fontSize: '16px',
+        fontWeight: '700',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)'
+      }}
+      onMouseEnter={(e) => {
+        if (!loading) {
+          e.currentTarget.style.transform = 'scale(1.02)';
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.5)';
+          e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!loading) {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.4)';
+          e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+        }
+      }}
     >
-      {loading ? 'Connecting...' : 'Connect Bank Account'}
+      {loading ? '⏳ Connecting...' : '🔗 Connect Bank Account'}
     </button>
   );
 };
