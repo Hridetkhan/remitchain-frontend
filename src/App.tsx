@@ -154,7 +154,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== DUAL FLOW: Try Lean, Fallback to Demo (Silent) =====
     const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!amount || !receiver || parseFloat(amount) <= 0) {
@@ -173,7 +172,7 @@ const App: React.FC = () => {
         setTransactionId(null);
 
         try {
-            // ---- TRY LEAN PAYMENT INTENT (Open Finance) ----
+            // Try Lean first (dual flow)
             try {
                 const intentRes = await fetch(`${API_URL}/api/payment/intent`, {
                     method: 'POST',
@@ -186,12 +185,11 @@ const App: React.FC = () => {
                     })
                 });
                 const intentData = await intentRes.json();
-                
+
                 if (intentData.success) {
                     const paymentIntentId = intentData.paymentIntentId;
                     console.log('✅ Lean Payment Intent created:', paymentIntentId);
 
-                    // Get customer token
                     const tokenRes = await fetch(`${API_URL}/api/lean/customer-token?customerId=${customerId}`);
                     const tokenData = await tokenRes.json();
                     if (tokenData.success) {
@@ -199,8 +197,7 @@ const App: React.FC = () => {
                         const appToken = process.env.REACT_APP_LEAN_APP_TOKEN || '730a9f67-7149-49e5-988d-30200b8fa695';
 
                         setStatus('🔐 Redirecting to your bank...');
-                        
-                        // Launch Lean pay modal
+
                         window.LeanV2.pay({
                             payment_intent_id: paymentIntentId,
                             customer_id: customerId,
@@ -210,27 +207,24 @@ const App: React.FC = () => {
                                 console.log('📨 Lean pay callback:', response);
                                 if (response.status === 'SUCCESS') {
                                     setStatus('✅ Payment authorized! Processing settlement...');
-                                    // Settle via Corda
                                     await settleTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
                                 } else if (response.status === 'CANCELLED') {
                                     setStatus('❌ Payment cancelled by user');
                                     setLoading(false);
                                 } else {
-                                    // Lean failed, fallback to demo automatically
                                     console.log('⚠️ Lean authorization failed, using demo fallback');
                                     await demoTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
                                 }
                             }
                         });
-                        return; // Exit early, callback handles the rest
+                        return;
                     }
                 }
             } catch (leanError) {
                 console.log('⚠️ Lean Payment Intent failed, using demo fallback:', leanError);
-                // Silent fallback to demo
             }
 
-            // ---- SILENT DEMO FALLBACK (user never knows) ----
+            // Silent demo fallback
             await demoTransaction(parseFloat(amount), currency, receiver, fxRate, customerId);
 
         } catch (err: any) {
@@ -239,7 +233,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== DEMO TRANSACTION (Silent, No "Demo" Indicators) =====
     const demoTransaction = async (amount: number, currency: string, receiver: string, fxRate: number, customerId: string) => {
         try {
             const response = await axios.post(
@@ -264,7 +257,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ===== CORD SETTLEMENT (from Lean success) =====
     const settleTransaction = async (amount: number, currency: string, receiver: string, fxRate: number, customerId: string) => {
         try {
             const response = await axios.post(
@@ -450,7 +442,36 @@ const App: React.FC = () => {
                             />
                         </div>
 
-                        <button type="submit" className="btn-send" disabled={loading || !isBankConnected}>
+                        <button 
+                            type="submit" 
+                            className="btn-send" 
+                            disabled={loading || !isBankConnected}
+                            style={{
+                                width: '100%',
+                                padding: '14px',
+                                background: loading || !isBankConnected 
+                                    ? '#a0aec0' 
+                                    : 'linear-gradient(135deg, #006a4e, #00875a)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontSize: '16px',
+                                fontWeight: '700',
+                                cursor: loading || !isBankConnected ? 'not-allowed' : 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!loading && isBankConnected) {
+                                    e.currentTarget.style.transform = 'scale(1.02)';
+                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.25)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                            }}
+                        >
                             {loading ? '⏳ Processing...' : '🚀 Send Money'}
                         </button>
                     </form>
@@ -462,11 +483,17 @@ const App: React.FC = () => {
                     )}
 
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ marginBottom: 8, fontSize: 14, color: '#4a5568', fontWeight: 500 }}>
+                            Bank Connection Status
+                        </div>
+                        
+                        {/* ✅ Connect Bank Account Button - Styled with Green Gradient */}
                         <LeanConnect
                             customerId={customerId}
                             onSuccess={handleLeanSuccess}
                             onError={handleLeanError}
                         />
+                        
                         {leanStatus && (
                             <p style={{
                                 marginTop: 8,
@@ -622,14 +649,25 @@ const App: React.FC = () => {
                 </div>
             </div>
 
+            {/* ✅ Footer with Country Flags */}
             <footer className="footer">
                 <p>© 2026 RemitChain — Built for the Bangladeshi Diaspora</p>
                 <div className="footer-links">
-                    <span>🇧🇩 Bangladesh</span>
-                    <span>🇦🇪 UAE</span>
-                    <span>🇸🇦 Saudi Arabia</span>
-                    <span>🇬🇧 UK</span>
-                    <span>🇺🇸 USA</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🇧🇩</span> Bangladesh
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🇦🇪</span> UAE
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🇸🇦</span> Saudi Arabia
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🇬🇧</span> UK
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🇺🇸</span> USA
+                    </span>
                 </div>
             </footer>
         </div>
